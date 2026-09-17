@@ -10,6 +10,11 @@ from functools import wraps
 import bcrypt
 from flask import Flask, flash, jsonify, redirect, render_template, request, session, url_for, send_file
 
+try:
+    from supabase import create_client
+except ImportError:  # pragma: no cover
+    create_client = None
+
 from models.database import init_hardware_db
 from controller.hardware_controller import HardwareController
 
@@ -19,6 +24,18 @@ DATABASE = os.path.join(BASE_DIR, "hardware_inventory.db")
 app = Flask(__name__, template_folder=os.path.join(BASE_DIR, "web", "templates"), static_folder=os.path.join(BASE_DIR, "web"), static_url_path="/static")
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "development-secret-change-me")
 app.config["DATABASE"] = DATABASE
+app.config["SUPABASE_URL"] = os.environ.get("SUPABASE_URL")
+app.config["SUPABASE_ANON_KEY"] = os.environ.get("SUPABASE_ANON_KEY")
+
+supabase_client = None
+if app.config["SUPABASE_URL"] and app.config["SUPABASE_ANON_KEY"] and create_client is not None:
+    supabase_client = create_client(app.config["SUPABASE_URL"], app.config["SUPABASE_ANON_KEY"])
+
+
+def get_supabase_client():
+    if supabase_client is None:
+        raise RuntimeError("Supabase is not configured. Set SUPABASE_URL and SUPABASE_ANON_KEY.")
+    return supabase_client
 
 
 def db():
