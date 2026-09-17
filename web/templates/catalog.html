@@ -1,0 +1,139 @@
+{% extends "page_shell.html" %}
+
+{% block title %}Hardware Catalog{% endblock %}
+{% block page_label %}EQUIPMENT LIBRARY{% endblock %}
+{% block page_title %}Hardware Catalog{% endblock %}
+
+{% block content %}
+<div class="page-intro">
+    <p>Browse equipment and request the quantity you need.</p></div>
+
+{% if role == 'USER' %}
+<div class="card borrow-request-card">
+    <div class="card-head">
+        <div>
+            <small class="section-label">USER REQUEST</small>
+            <h3>What would you like to borrow?</h3>
+            <p class="form-note">Enter your item, student ID, and requested quantity.</p>
+        </div>
+    </div>
+    <form class="borrow-form" method="post" action="{{ url_for('borrow') }}">
+        <label>
+            Equipment name
+            <input name="item_name" list="equipment-options" required placeholder="Type or select an equipment item">
+            <datalist id="equipment-options">
+                {% for item in items if item.quantity > 0 %}
+                <option value="{{ item.item_name }}">{{ item.quantity }} available</option>
+                {% endfor %}
+            </datalist>
+        </label>
+        <label>
+            Quantity
+            <input name="quantity" type="number" min="1" required placeholder="Enter quantity">
+        </label>
+        <label>
+            Student ID
+            <input name="student_id" required placeholder="e.g. 2024-00123">
+        </label>
+        <button type="submit" class="btn green">Request borrow</button>
+    </form>
+</div>
+{% endif %}
+
+{% if role == 'ADMIN' %}
+<div class="card admin-equipment-card">
+    <div class="card-head">
+        <div>
+            <small class="section-label">ADMIN TOOLS</small>
+            <h3>{{ 'Edit equipment item' if edit_item else 'Add equipment item' }}</h3>
+        </div>
+        {% if edit_item %}
+        <a class="btn neutral" href="{{ url_for('catalog') }}">Cancel edit</a>
+        {% endif %}
+    </div>
+    <form class="equipment-form" method="post" action="{{ url_for('save_equipment') }}">
+        {% if edit_item %}
+        <input type="hidden" name="item_id" value="{{ edit_item.item_id }}">
+        {% endif %}
+        <label>
+            Item name
+            <input name="name" value="{{ edit_item.item_name if edit_item else '' }}" required>
+        </label>
+        <label>
+            Category
+            <input name="category" value="{{ edit_item.category if edit_item else '' }}" required>
+        </label>
+        <label>
+            Quantity
+            <input name="quantity" type="number" min="0" value="{{ edit_item.quantity if edit_item else '' }}" required>
+        </label>
+        <label>
+            Unit price
+            <input name="price" type="number" min="0" step=".01" value="{{ edit_item.unit_price if edit_item else '' }}" required>
+        </label>
+        <label>
+            Serial number
+            <input name="serial_number" value="{{ edit_item.serial_number if edit_item else '' }}">
+        </label>
+        <label>
+            Condition
+            <select name="condition">
+                {% for option in ['Excellent', 'Good', 'Needs Inspection', 'Damaged', 'Broken', 'Retired'] %}
+                <option {{ 'selected' if edit_item and edit_item.condition == option }}>{{ option }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <div class="equipment-form-actions">
+            <button type="submit" class="btn green">{{ 'Save changes' if edit_item else 'Add equipment' }}</button>
+        </div>
+    </form>
+</div>
+{% endif %}
+
+<div class="card table-card">
+    <table>
+        <thead>
+            <tr>
+                <th>Equipment</th>
+                <th>Category</th>
+                <th>Available</th>
+                <th>Condition</th>
+                <th>Status</th>
+                {% if role == 'ADMIN' %}
+                <th>Borrowed</th>
+                <th>Manage</th>
+                {% endif %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td>
+                    <b>{{ item.item_name }}</b>
+                    <small>{{ item.serial_number or 'No serial number' }}</small>
+                </td>
+                <td>{{ item.category }}</td>
+                <td>{{ item.quantity }}</td>
+                <td>{{ item.condition }}</td>
+                <td>
+                    <span class="status {{ 'warn' if item.quantity <= 5 else 'ok' }}">{{ item.status }}</span>
+                </td>
+                {% if role == 'ADMIN' %}
+                <td>{{ item.borrowed_quantity }}</td>
+                <td class="manage-actions">
+                    <a class="table-btn" href="{{ url_for('catalog', edit=item.item_id) }}">Edit</a>
+                    <form method="post" action="{{ url_for('delete_equipment', item_id=item.item_id) }}">
+                        <button type="submit" class="table-btn reject">Delete</button>
+                    </form>
+                </td>
+                {% endif %}
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="7" class="empty">No available equipment items.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

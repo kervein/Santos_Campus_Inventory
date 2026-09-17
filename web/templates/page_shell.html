@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}EquipTrack{% endblock %} | EquipTrack</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body class="dashboard-page">
+
+    <!-- Sidebar Navigation Rail -->
+    <aside class="rail">
+        <div class="rail-brand">
+            <span class="logo">ET</span>
+            <b>Equip<br>Track</b>
+        </div>
+        
+        <small>NAVIGATION</small>
+        
+        {% if role == 'ADMIN' %}
+        <a href="{{ url_for('dashboard') }}">◈ <span>Dashboard</span></a>
+        {% endif %}
+        
+        <a href="{{ url_for('catalog') }}">▤ <span>Hardware Catalog</span></a>
+        
+        {% if role == 'USER' %}
+        <a href="{{ url_for('my_borrowing') }}">↔ <span>My Borrowing</span></a>
+        {% endif %}
+        
+        {% if role == 'ADMIN' %}
+        <a href="{{ url_for('borrowed_page') }}">↔ <span>Borrowed Items</span></a>
+        <a href="{{ url_for('approvals') }}">✓ <span>Pending Requests</span></a>
+        <a href="{{ url_for('history_page') }}">◷ <span>History / Audit</span></a>
+        {% endif %}
+        
+        <div class="rail-bottom">
+            <a href="{{ url_for('settings') }}">⚙ <span>Settings</span></a>
+            <a class="logout-link" href="{{ url_for('logout') }}" onclick="return window.confirm('Are you sure you want to log out?');">↪ <span>Log out</span></a>
+        </div>
+    </aside>
+
+    <!-- Main Content Shell -->
+    <main class="dash-main">
+        <header class="dash-header">
+            <div>
+                <small class="section-label">{% block page_label %}{% endblock %}</small>
+                <h1>{% block page_title %}{% endblock %}</h1>
+            </div>
+            <div class="profile">
+                <span class="avatar">{{ session.username[0]|upper }}</span>
+                <span>
+                    <b>{{ session.username }}</b>
+                    <small>{{ role|title }} account</small>
+                </span>
+            </div>
+        </header>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% for category, message in messages %}
+                <div class="alert top-alert {{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endwith %}
+
+        <section class="dash-section">
+            {% block content %}{% endblock %}
+        </section>
+    </main>
+
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Engineering Equipment Tracking System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main id="login-view" class="login-layout">
+    <section class="login-hero">
+      <div class="brand-mark">ET</div>
+      <p class="eyebrow">LabFlow Command Center</p>
+      <h1>Equipment that keeps your lab moving.</h1>
+      <p class="hero-copy">Track inventory, monitor availability, and keep every loan accountable from one clear workspace.</p>
+      <div class="hero-stat"><strong>24/7</strong><span>Inventory visibility</span></div>
+    </section>
+    <section class="login-card">
+      <div class="brand-line"><span class="brand-mark small">ET</span><span>Equipment Tracker</span></div>
+      <p class="eyebrow">Welcome back</p>
+      <h2>Sign in</h2>
+      <p class="muted">Use any username and password for this frontend demo.</p>
+      <form id="login-form">
+        <label for="username">Username</label>
+        <input id="username" name="username" type="text" autocomplete="username" placeholder="e.g. lab.admin" required>
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" placeholder="Enter your password" required>
+        <div class="login-options">
+          <label class="check-label"><input id="remember-me" type="checkbox"> Remember me</label>
+          <a href="#" id="reset-link">Reset password</a>
+        </div>
+        <button class="button primary full-width" type="submit">Sign in <span>→</span></button>
+      </form>
+      <p id="login-message" class="form-message" role="status"></p>
+    </section>
+  </main>
+
+  <main id="app-view" class="app-shell hidden">
+    <aside class="sidebar">
+      <div class="brand-line"><span class="brand-mark small">ET</span><span>Equipment<br><strong>Tracker</strong></span></div>
+      <nav aria-label="Main navigation">
+        <button class="nav-item active" data-section="dashboard"><span>▦</span> Dashboard</button>
+        <button class="nav-item" data-section="inventory"><span>▤</span> Inventory</button>
+        <button class="nav-item" data-section="loans"><span>↔</span> Borrow & Return</button>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="nav-item" data-section="settings"><span>⚙</span> Settings</button>
+        <button id="logout-button" class="nav-item"><span>↪</span> Log out</button>
+      </div>
+    </aside>
+
+    <section class="workspace">
+      <header class="topbar">
+        <div><p class="eyebrow">Engineering equipment</p><h1 id="page-title">Dashboard</h1></div>
+        <div class="user-menu"><div class="avatar">U</div><div><strong id="user-name">User</strong><small>Laboratory user</small></div></div>
+      </header>
+
+      <section id="dashboard-section" class="page-section">
+        <div class="welcome-row"><div><h2>Good morning, <span id="welcome-name">User</span>.</h2><p class="muted">Here is what is happening with your equipment today.</p></div><button class="button secondary" id="dashboard-refresh">↻ Refresh data</button></div>
+        <div class="stats-grid">
+          <article class="stat-card accent"><span>Total items</span><strong id="stat-total">0</strong><small>Across all categories</small></article>
+          <article class="stat-card"><span>Available</span><strong id="stat-available">0</strong><small class="positive">Ready to borrow</small></article>
+          <article class="stat-card"><span>Borrowed</span><strong id="stat-borrowed">0</strong><small>Currently checked out</small></article>
+          <article class="stat-card"><span>Inventory value</span><strong id="stat-value">₱0</strong><small>Current asset value</small></article>
+        </div>
+        <div class="content-grid">
+          <article class="panel chart-panel"><div class="panel-heading"><div><p class="eyebrow">Overview</p><h3>Equipment status</h3></div><span class="status-dot">Live</span></div><div class="bar-chart" id="status-chart"></div><div class="chart-legend"><span><i class="dot available"></i>Available</span><span><i class="dot borrowed"></i>Borrowed</span><span><i class="dot maintenance"></i>Maintenance</span></div></article>
+          <article class="panel"><div class="panel-heading"><div><p class="eyebrow">Attention needed</p><h3>Low stock items</h3></div><button class="text-button" data-section-link="inventory">View all</button></div><div id="low-stock-list" class="compact-list"></div></article>
+        </div>
+        <article class="panel recent-panel"><div class="panel-heading"><div><p class="eyebrow">Latest activity</p><h3>Recent equipment</h3></div><button class="text-button" data-section-link="inventory">Open inventory →</button></div><div class="table-wrap"><table><thead><tr><th>Equipment</th><th>Category</th><th>Status</th><th>Condition</th><th>Location</th></tr></thead><tbody id="recent-table"></tbody></table></div></article>
+      </section>
+
+      <section id="inventory-section" class="page-section hidden">
+        <div class="section-heading"><div><p class="eyebrow">Equipment library</p><h2>Inventory</h2><p class="muted">Search and manage the equipment in your laboratory.</p></div><button class="button primary" id="add-item-button">＋ Add equipment</button></div>
+        <article class="panel"><div class="toolbar"><div class="search-box"><span>⌕</span><input id="search-input" type="search" placeholder="Search equipment or serial number"></div><select id="category-filter"><option value="all">All categories</option></select></div><div class="table-wrap"><table><thead><tr><th>Equipment</th><th>Category</th><th>Quantity</th><th>Unit price</th><th>Status</th><th>Condition</th><th></th></tr></thead><tbody id="inventory-table"></tbody></table></div><p id="empty-inventory" class="empty-state hidden">No equipment matches your search.</p></article>
+      </section>
+
+      <section id="loans-section" class="page-section hidden">
+        <div class="section-heading"><div><p class="eyebrow">Equipment circulation</p><h2>Borrow & Return</h2><p class="muted">Keep track of equipment currently checked out.</p></div><button class="button primary" id="borrow-button">＋ New borrow record</button></div>
+        <article class="panel"><div class="panel-heading"><div><p class="eyebrow">Active records</p><h3>Currently borrowed</h3></div></div><div class="table-wrap"><table><thead><tr><th>Equipment</th><th>Borrower</th><th>Student ID</th><th>Quantity</th><th>Borrowed at</th><th></th></tr></thead><tbody id="loans-table"></tbody></table></div><p id="empty-loans" class="empty-state hidden">There are no active borrow records.</p></article>
+      </section>
+
+      <section id="settings-section" class="page-section hidden"><article class="panel settings-panel"><p class="eyebrow">Workspace</p><h2>Settings</h2><p class="muted">Frontend preferences are saved in this browser.</p><label class="setting-row"><span>Compact table rows <small>Show more equipment in less space</small></span><input type="checkbox" id="compact-toggle"></label><label class="setting-row"><span>Demo notifications <small>Show reminders for low-stock equipment</small></span><input type="checkbox" checked></label></article></section>
+    </section>
+  </main>
+
+  <dialog id="item-dialog"><form method="dialog" id="item-form" class="modal-form"><div class="modal-heading"><div><p class="eyebrow">Inventory</p><h2>Add equipment</h2></div><button class="icon-button" value="cancel" aria-label="Close">×</button></div><label>Item name<input name="name" required placeholder="e.g. Digital Multimeter"></label><div class="form-grid"><label>Category<input name="category" required placeholder="e.g. Measurement"></label><label>Quantity<input name="quantity" type="number" min="0" required value="1"></label><label>Unit price (₱)<input name="price" type="number" min="0" step="0.01" required value="0"></label><label>Serial number<input name="serial"></label></div><label>Location<input name="location" placeholder="e.g. Lab 1 / Cabinet A"></label><div class="modal-actions"><button class="button secondary" value="cancel">Cancel</button><button class="button primary" value="default">Add equipment</button></div></form></dialog>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,74 @@
+{% extends "page_shell.html" %}
+
+{% block title %}My Borrowing{% endblock %}
+{% block page_label %}MY ACTIVITY{% endblock %}
+{% block page_title %}My Borrowing{% endblock %}
+
+{% block content %}
+<div class="page-intro">
+    <p>Track your borrow request decisions and return active equipment.</p>
+</div>
+
+<div class="user-status-grid">
+    <!-- Request Notifications Section -->
+    <div class="card user-notification-card">
+        <div class="card-head">
+            <div>
+                <small class="section-label">REQUEST NOTIFICATIONS</small>
+                <h3>Borrow request updates</h3>
+            </div>
+            <span class="pill">{{ user_request_history|length }} updates</span>
+        </div>
+        
+        {% for row in user_request_history %}
+        <div class="notification-row">
+            <span class="notification-icon {{ 'approved' if row.status == 'APPROVED' else 'rejected' }}">
+                {{ '✓' if row.status == 'APPROVED' else '!' }}
+            </span>
+            <span>
+                <b>{{ row.item_name }}</b>
+                <small>{{ row.quantity }} unit(s) · Reviewed {{ row.reviewed_at or 'recently' }}</small>
+            </span>
+            <strong class="{{ 'positive' if row.status == 'APPROVED' else 'danger-text' }}">
+                {{ row.status|title }}
+            </strong>
+        </div>
+        {% else %}
+        <p class="empty">Approved or rejected requests will appear here.</p>
+        {% endfor %}
+    </div>
+
+    <!-- Active Loans Section -->
+    <div class="card user-loan-card">
+        <div class="card-head">
+            <div>
+                <small class="section-label">ACTIVE LOANS</small>
+                <h3>Items not yet returned</h3>
+            </div>
+            <span class="pill">{{ user_active_borrowed|length }} active</span>
+        </div>
+        
+        {% for row in user_active_borrowed %}
+        <div class="notification-row">
+            <span class="notification-icon loan">↔</span>
+            <span>
+                <b>{{ row.item_name }}</b>
+                <small>{{ row.quantity }} unit(s) · Borrowed {{ row.borrowed_at }}{% if row.due_at %} · Due {{ row.due_at }}{% endif %}</small>
+            </span>
+            
+            {% if row.return_status %}
+            <strong class="status warn">Return pending</strong>
+            {% else %}
+            <form class="return-form" method="post" action="{{ url_for('return_request') }}">
+                <input type="hidden" name="borrow_id" value="{{ row.borrow_id }}">
+                <input name="quantity" type="number" min="1" max="{{ row.quantity }}" value="{{ row.quantity }}">
+                <button type="submit" class="table-btn">Return</button>
+            </form>
+            {% endif %}
+        </div>
+        {% else %}
+        <p class="empty">You have no items waiting to be returned.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

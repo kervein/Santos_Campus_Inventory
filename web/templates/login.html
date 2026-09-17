@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sign in | EquipTrack</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body class="auth-page">
+    <main class="auth-card">
+        <div class="mobile-brand">
+            <span class="logo">ET</span> EquipTrack
+        </div>
+        <small class="section-label">LABFLOW COMMAND CENTER</small>
+        <h2>Sign in</h2>
+        <p class="hint">Enter your account details.</p>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% for category, message in messages %}
+                <div class="alert {{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endwith %}
+
+        <form method="post">
+            <label>
+                Username
+                <input name="username" type="text" required autofocus autocomplete="username" placeholder="e.g. lab.admin">
+            </label>
+            <label>
+                Password
+                <input name="password" type="password" required autocomplete="current-password" placeholder="Your password">
+            </label>
+            <button type="submit" class="btn green wide">Sign in</button>
+        </form>
+
+        <div class="auth-links">
+            <a href="{{ url_for('register') }}">Create an account</a>
+            <a href="{{ url_for('reset') }}">Reset / unlock</a>
+        </div>
+    </main>
+
+</body>
+</html>

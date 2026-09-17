@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Reset password | EquipTrack</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body class="auth-page">
+
+    <main class="auth-card centered">
+        <div class="mobile-brand">
+            <span class="logo">ET</span> EquipTrack
+        </div>
+        
+        <small class="section-label">ACCOUNT RECOVERY</small>
+        <h2>Request a password change</h2>
+        <p class="hint">Enter the email registered to your account. An administrator will provide your new password.</p>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% for category, message in messages %}
+                <div class="alert {{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endwith %}
+
+        <form method="post">
+            <label>
+                Registered email
+                <input name="email" type="email" required autofocus autocomplete="email" placeholder="e.g. name@lab.com">
+            </label>
+            <button type="submit" class="btn orange wide">Notify administrator</button>
+        </form>
+
+        <div class="auth-links">
+            <a href="{{ url_for('login') }}">← Back to sign in</a>
+        </div>
+    </main>
+
+</body>
+</html>

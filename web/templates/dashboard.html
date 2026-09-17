@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Dashboard | EquipTrack</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body class="dashboard-page">
+
+    <!-- Sidebar Navigation Rail -->
+    <aside class="rail">
+        <div class="rail-brand">
+            <span class="logo">ET</span>
+            <b>Equip<br>Track</b>
+        </div>
+        
+        <small>NAVIGATION</small>
+        <a class="active" href="{{ url_for('dashboard') }}">◈ <span>Dashboard</span></a>
+        <a href="{{ url_for('catalog') }}">▤ <span>Hardware Catalog</span></a>
+        {% if role == 'ADMIN' %}
+        <a href="{{ url_for('borrowed_page') }}">↔ <span>Borrowed Items</span></a>
+        {% else %}
+        <a href="{{ url_for('my_borrowing') }}">↔ <span>My Borrowing</span></a>
+        {% endif %}
+        
+        {% if role == 'ADMIN' %}
+        <a href="{{ url_for('approvals') }}">
+            ✓ <span>Pending Requests</span>
+            <i class="count">{{ pending_borrows|length + pending_returns|length }}</i>
+        </a>
+        <a href="{{ url_for('history_page') }}">◷ <span>History / Audit</span></a>
+        {% endif %}
+        
+        <div class="rail-bottom">
+            <a href="{{ url_for('settings') }}">⚙ <span>Settings</span></a>
+            <a class="logout-link" href="{{ url_for('logout') }}" onclick="return window.confirm('Are you sure you want to log out?');">↪ <span>Log out</span></a>
+        </div>
+    </aside>
+
+    <!-- Main Content Layout -->
+    <main class="dash-main">
+        <header class="dash-header">
+            <div>
+                <small class="section-label">LAB OPERATIONS</small>
+                <h1>Dashboard</h1>
+            </div>
+            <div class="dashboard-header-actions">
+                {% if role == 'ADMIN' %}
+                <button class="btn export-btn" type="button" data-report-print>Generate report</button>
+                <a class="btn export-btn csv-export-btn" href="{{ url_for('export_report') }}">Export .CSV</a>
+                {% endif %}
+                <div class="profile">
+                    <span class="avatar">{{ session.username[0]|upper }}</span>
+                    <span>
+                        <b>{{ session.username }}</b>
+                        <small>{{ role|title }} account</small>
+                    </span>
+                </div>
+            </div>
+        </header>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% for category, message in messages %}
+                <div class="alert top-alert {{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endwith %}
+
+        {% include "report_filters.html" %}
+
+        <section class="dash-section">
+            <div class="hello">
+                <div>
+                    <h2>Good morning, {{ session.username }}.</h2>
+                    <p>Here is what is happening with your equipment today.</p>
+                </div>
+                <span class="live">● System live</span>
+            </div>
+
+            <!-- Metrics Overview Grid -->
+            <div class="metric-grid">
+                <div class="metric">
+                    <small>TOTAL STOCKS</small>
+                    <strong>{{ total_stocks }}</strong>
+                    <span>Total units in the catalog</span>
+                </div>
+                <div class="metric green-edge">
+                    <small>AVAILABLE NOW</small>
+                    <strong>{{ total_available }}</strong>
+                    <span class="positive">Ready to borrow</span>
+                </div>
+                <div class="metric orange-edge">
+                    <small>ON LOAN</small>
+                    <strong>{{ total_borrowed }}</strong>
+                    <span>Currently checked out</span>
+                </div>
+                <div class="metric">
+                    <small>CATALOG ITEMS</small>
+                    <strong>{{ items|length }}</strong>
+                    <span>Tracked equipment types</span>
+                </div>
+            </div>
+
+            <!-- Analytics and Charts Grid -->
+            <div class="dashboard-grid">
+                
+                <!-- Category Stats Bar Graph -->
+                <article class="card graph-card category-graph">
+                    <div class="card-head">
+                        <div>
+                            <small class="section-label">INVENTORY ANALYTICS</small>
+                            <h3>Stock by category</h3>
+                        </div>
+                        <span class="pill">Current stock</span>
+                    </div>
+                    <div class="category-bars">
+                        {% set max_stock = category_stats[0].stock if category_stats else 1 %}
+                        {% for stat in category_stats[:6] %}
+                        <div class="category-bar">
+                            <div class="bar-label">
+                                <span>{{ stat.category }}</span>
+                                <b>{{ stat.stock }}</b>
+                            </div>
+                            <div class="bar-track">
+                                <i style="height:{{ ((stat.stock / max_stock) * 100)|round|int }}%"></i>
+                            </div>
+                        </div>
+                        {% else %}
+                        <p class="empty">Add equipment to see category analytics.</p>
+                        {% endfor %}
+                    </div>
+                </article>
+
+                <!-- Status Donut Chart -->
+                <article class="card graph-card donut-card">
+                    <div class="card-head">
+                        <div>
+                            <small class="section-label">PRODUCT STATISTICS</small>
+                            <h3>Equipment status</h3>
+                        </div>
+                        <span class="pill">Live</span>
+                    </div>
+                    <div class="donut-wrap">
+                        <div class="status-donut" style="--available:{{ ((total_available / (total_stocks if total_stocks else 1)) * 100)|round|int }}%;--borrowed:{{ ((total_borrowed / (total_stocks if total_stocks else 1)) * 100)|round|int }}%">
+                            <div>
+                                <strong>{{ total_stocks }}</strong>
+                                <small>Total units</small>
+                            </div>
+                        </div>
+                        <div class="donut-legend">
+                            <span><i class="legend-green"></i>Available <b>{{ total_available }}</b></span>
+                            <span><i class="legend-orange"></i>Borrowed <b>{{ total_borrowed }}</b></span>
+                            <span><i class="legend-gray"></i>Catalog items <b>{{ items|length }}</b></span>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- Circulation Trend Line Chart -->
+                <article class="card graph-card trend-card">
+                    <div class="card-head">
+                        <div>
+                            <small class="section-label">CIRCULATION TREND</small>
+                            <h3>Borrow activity</h3>
+                        </div>
+                        <span class="pill">Last 6 months</span>
+                    </div>
+                    <div class="trend-chart">
+                        {% set chart_max = monthly_max|default(0, true) %}
+                        {% set chart_mid = monthly_mid|default(0, true) %}
+                        {% set chart_points = monthly_activity|default([], true) %}
+                        <div class="y-axis">
+                            <span>{{ chart_max|round|int }}</span>
+                            <span>{{ chart_mid|round|int }}</span>
+                            <span>0</span>
+                        </div>
+                        <svg viewBox="0 0 600 190" preserveAspectRatio="none" aria-label="Monthly borrowed units for the last six months">
+                            <defs>
+                                <linearGradient id="trend-fill" x1="0" x2="0" y1="0" y2="1">
+                                    <stop offset="0" stop-color="#ff6231" stop-opacity=".28"/>
+                                    <stop offset="1" stop-color="#ff6231" stop-opacity="0"/>
+                                </linearGradient>
+                            </defs>
+                            <path class="grid-line" d="M0 35H600M0 95H600M0 155H600"/>
+                            {% set max_value = chart_max if chart_max else 1 %}
+                            {% set points = namespace(values=[]) %}
+                            {% for point in chart_points %}
+                                {% set x = loop.index0 * 120 %}
+                                {% set y = 155 - ((point.borrowed / max_value) * 120) %}
+                                {% set _ = points.values.append(x|string + ',' + y|string) %}
+                            {% endfor %}
+                            <polygon class="trend-area" points="{{ points.values|join(' ') }} 600,190 0,190"/>
+                            <polyline class="trend-line" points="{{ points.values|join(' ') }}"/>
+                        </svg>
+                        <div class="x-axis">
+                            {% for point in chart_points %}
+                            <span title="{{ point.borrowed }} borrowed">{{ point.label }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </article>
+
+                <!-- Low Stock Attention Card -->
+                <article class="card graph-card attention-card">
+                    <div class="card-head">
+                        <div>
+                            <small class="section-label">ATTENTION NEEDED</small>
+                            <h3>Low stock items</h3>
+                        </div>
+                        <a href="{{ url_for('catalog') }}">View catalog →</a>
+                    </div>
+                    {% for item in items if item.quantity <= 5 %}
+                    <div class="mini-row">
+                        <span class="mini-icon">!</span>
+                        <span>
+                            <b>{{ item.item_name }}</b>
+                            <small>{{ item.category }}</small>
+                        </span>
+                        <strong>{{ item.quantity }} left</strong>
+                    </div>
+                    {% else %}
+                    <p class="empty">All equipment is well stocked.</p>
+                    {% endfor %}
+                </article>
+
+            </div>
+
+            {% include "report_content.html" %}
+        </section>
+    </main>
+
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

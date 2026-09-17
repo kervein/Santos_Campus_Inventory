@@ -1,0 +1,113 @@
+<div class="report-workspace">
+    
+    <!-- Inventory Activity Trend Card -->
+    <article class="card trend-report-card">
+        <div class="card-head">
+            <div>
+                <small class="section-label">INVENTORY ACTIVITY</small>
+                <h3>Borrowing pulse</h3>
+                <p class="form-note">Daily activity ending {{ report_end_date }}</p>
+            </div>
+            <div class="trend-switcher">
+                {% for period in [7, 30, 180, 365] %}
+                <a class="{{ 'active' if period == 30 }}" href="{{ url_for('dashboard') }}">{{ period }}d</a>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <div class="activity-bars">
+            {% set max_trend = report_activity|map(attribute='borrowed')|max or 1 %}
+            {% for point in report_activity %}
+            <div class="activity-column" title="{{ point.label }}: {{ point.borrowed }} borrowed">
+                <i style="height:{{ ((point.borrowed / max_trend) * 100)|round|int }}%"></i>
+                <small>{{ point.label }}</small>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <div class="trend-legend">
+            <span><i class="legend-orange"></i>Borrowed units per day</span>
+            <span>30 day view</span>
+        </div>
+    </article>
+
+    <!-- Borrowing Overview Card -->
+    <article class="card borrowing-overview">
+        <div class="card-head">
+            <div>
+                <small class="section-label">BORROWING OVERVIEW</small>
+            </div>
+        </div>
+        <div class="overview-grid">
+            <div>
+                <span>Currently borrowed</span>
+                <strong>{{ total_borrowed }}</strong>
+            </div>
+            <div>
+                <span>Pending requests</span>
+                <strong>{{ report_pending }}</strong>
+            </div>
+            <div>
+                <span>Returned in range</span>
+                <strong>{{ report_returned }}</strong>
+            </div>
+            <div class="{{ 'danger-stat' if report_overdue else '' }}">
+                <span>Overdue</span>
+                <strong>{{ report_overdue }}</strong>
+            </div>
+        </div>
+    </article>
+
+    <!-- Inventory Detail Table Card -->
+    <article class="card table-card report-table">
+        <div class="card-head">
+            <div>
+                <small class="section-label">INVENTORY DETAIL</small>
+                <h3>Equipment register</h3>
+            </div>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Equipment</th>
+                    <th>Category</th>
+                    <th>Available</th>
+                    <th>Borrowed</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in report_items %}
+                <tr>
+                    <td><b>{{ item.item_name }}</b></td>
+                    <td>{{ item.category }}</td>
+                    <td>{{ item.quantity }}</td>
+                    <td>{{ item.borrowed_quantity }}</td>
+                    <td>
+                        <span class="status {{ 'warn' if item.quantity <= 5 else 'ok' }}">{{ item.status }}</span>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" class="empty">No equipment records.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </article>
+
+    <!-- Report Modal -->
+    <div class="report-modal" data-report-modal hidden>
+        <div class="report-modal-card">
+            <button class="modal-close" type="button" data-report-close>×</button>
+            <small class="section-label">REPORT BUILDER</small>
+            <h2>Generate an admin report</h2>
+            <p class="hint">Choose the sections to include, then print or save as PDF from your browser.</p>
+            <label><input type="checkbox" checked> Inventory summary</label>
+            <label><input type="checkbox" checked> Borrowing statistics</label>
+            <label><input type="checkbox" checked> Low stock alerts</label>
+            <button class="btn green wide" type="button" data-report-print-now>Print / Save PDF</button>
+        </div>
+    </div>
+
+</div>

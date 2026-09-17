@@ -1,0 +1,81 @@
+{% extends "page_shell.html" %}
+
+{% block title %}Admin Approvals{% endblock %}
+{% block page_label %}ADMINISTRATION{% endblock %}
+{% block page_title %}Pending Requests{% endblock %}
+
+{% block content %}
+<div class="page-intro">
+    <p>Approve or reject borrowing and return requests.</p>
+</div>
+
+<div class="card table-card">
+    <h3 class="table-title">Borrow requests</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Item</th>
+                <th>Requester</th>
+                <th>Student ID</th>
+                <th>Quantity</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in pending_borrows %}
+            <tr>
+                <td>{{ row.item_name }}</td>
+                <td>{{ row.username }}</td>
+                <td>{{ row.student_id }}</td>
+                <td>{{ row.quantity }}</td>
+                <td class="actions">
+                    <form method="post" action="{{ url_for('review_borrow', request_id=row.request_id, action='approve') }}">
+                        <button type="submit" class="table-btn approve">Approve</button>
+                    </form>
+                    <form method="post" action="{{ url_for('review_borrow', request_id=row.request_id, action='reject') }}">
+                        <button type="submit" class="table-btn reject">Reject</button>
+                    </form>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="5" class="empty">No pending borrow requests.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <h3 class="table-title">Return requests</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Item</th>
+                <th>Requester</th>
+                <th>Quantity</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in pending_returns %}
+            <tr>
+                <td>{{ row.item_name }}</td>
+                <td>{{ row.username }}</td>
+                <td>{{ row.quantity }}</td>
+                <td class="actions">
+                    <form method="post" action="{{ url_for('review_return', request_id=row.request_id, action='approve') }}">
+                        <button type="submit" class="table-btn approve">Approve</button>
+                    </form>
+                    <form method="post" action="{{ url_for('review_return', request_id=row.request_id, action='reject') }}">
+                        <button type="submit" class="table-btn reject">Reject</button>
+                    </form>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="4" class="empty">No pending return requests.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

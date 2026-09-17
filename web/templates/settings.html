@@ -1,0 +1,85 @@
+{% extends "page_shell.html" %}
+{% block title %}Settings{% endblock %}
+{% block page_label %}PREFERENCES{% endblock %}
+{% block page_title %}Settings{% endblock %}
+{% block content %}
+<div class="page-intro"><p>Customize how EquipTrack looks and feels on this device.</p></div>
+<article class="card settings-card">
+  <div class="settings-heading"><div><small class="section-label">APPEARANCE</small><h3>Theme</h3><p>Switch between a bright workspace and a low-light interface.</p></div><span id="theme-status" class="pill">Light mode</span></div>
+  <label class="theme-switch"><span><b>Dark mode</b><small>Use darker surfaces and softer contrast.</small></span><input id="theme-toggle" type="checkbox"><i></i></label>
+</article>
+{% if role|upper != 'ADMIN' %}
+<article class="card settings-card">
+  <div class="settings-heading"><div><small class="section-label">ACCOUNT SECURITY</small><h3>Change password request</h3><p>Enter the password you want to use. It will take effect only after an administrator approves your request.</p></div><span class="pill">Admin approval</span></div>
+  <form method="post" action="{{ url_for('account_password_request') }}" class="equipment-form">
+    <label>Requested new password
+      <input name="requested_password" type="password" required minlength="8" autocomplete="new-password" placeholder="Use uppercase, number, and special character">
+    </label>
+    <div class="equipment-form-actions"><button class="btn orange" type="submit">Request password change</button></div>
+  </form>
+</article>
+{% else %}
+<article class="card settings-card">
+  <div class="settings-heading"><div><small class="section-label">ACCOUNT SECURITY</small><h3>Account security</h3><p>Manage your administrator password and reset or unlock user accounts.</p></div><span class="pill">Admin account</span></div>
+  <div class="security-section">
+    <div class="security-section-heading"><h3>Change your password</h3><p>Update the administrator password directly using your current password.</p></div>
+  <form method="post" action="{{ url_for('account_change_password') }}" class="equipment-form">
+    <label>Current password
+      <input name="current_password" type="password" required autocomplete="current-password">
+    </label>
+    <label>New password
+      <input name="new_password" type="password" required minlength="8" autocomplete="new-password" placeholder="Use uppercase, number, and special character">
+    </label>
+    <label>Confirm new password
+      <input name="confirm_password" type="password" required minlength="8" autocomplete="new-password">
+    </label>
+    <div class="equipment-form-actions"><button class="btn orange" type="submit">Change admin password</button></div>
+  </form>
+  </div>
+  <div class="security-section">
+  <div class="security-section-heading"><h3>Unlock or reset an account</h3><p>Reset a user's password and clear the lockout after repeated failed sign-in attempts.</p><span class="pill">{{ locked_users|length }} locked account{{ '' if locked_users|length == 1 else 's' }}</span></div>
+  {% if locked_users %}
+  <div class="locked-account-list">
+    <small class="section-label">LOCKED ACCOUNTS</small>
+    {% for user in locked_users %}
+    <div class="mini-row"><span class="mini-icon">!</span><span><b>{{ user.username }}</b><small>{{ user.email or 'No email' }}</small></span><strong>{{ user.failed_attempts }} failed attempts</strong></div>
+    {% endfor %}
+  </div>
+  {% else %}<p class="empty">No accounts are currently locked.</p>{% endif %}
+  {% if reset_requests %}
+  <div class="locked-account-list"><small class="section-label">PENDING PASSWORD REQUESTS</small>
+    {% for request in reset_requests %}
+    <div class="mini-row">
+      <span class="mini-icon">↻</span>
+      <span><b>{{ request.username }}</b><small>{{ request.email }}</small></span>
+      <span class="request-actions">
+        <form method="post" action="{{ url_for('review_password_request', request_id=request.request_id, action='approve') }}">
+          <button class="table-btn approve" type="submit">Approve requested password</button>
+        </form>
+        <form method="post" action="{{ url_for('review_password_request', request_id=request.request_id, action='reject') }}">
+          <button class="table-btn reject" type="submit">Reject</button>
+        </form>
+      </span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  <form method="post" action="{{ url_for('admin_account_reset') }}" class="equipment-form">
+    <label>Account
+      <select name="username" required>
+        <option value="">Select an account</option>
+        {% for user in locked_users %}<option value="{{ user.username }}">{{ user.username }} (locked)</option>{% endfor %}
+        {% for request in reset_requests if request.username not in (locked_users|map(attribute='username')|list) %}<option value="{{ request.username }}">{{ request.username }} (password request)</option>{% endfor %}
+      </select>
+    </label>
+    <label>New password
+      <input name="password" type="password" required minlength="8" placeholder="Use uppercase, number, and special character">
+    </label>
+    <div class="equipment-form-actions">
+      <button class="btn green" type="submit">Unlock and reset account</button>
+    </div>
+  </form>
+  </div>
+</article>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,46 @@
+<form class="card report-filters dashboard-report-filters" method="get" action="{{ url_for('dashboard') }}">
+    <label>
+        Date range
+        <select name="date_range" data-date-range>
+            <option value="month" selected>This month</option>
+            <option value="today">Today</option>
+            <option value="week">This week</option>
+            <option value="custom">Custom range</option>
+        </select>
+    </label>
+    
+    <label>
+        Category
+        <select name="category">
+            <option>All categories</option>
+            {% for option in category_options %}
+            <option>{{ option.category }}</option>
+            {% endfor %}
+        </select>
+    </label>
+    
+    <label>
+        Stock status
+        <select name="status">
+            <option>All statuses</option>
+            <option>In Stock</option>
+            <option>Low Stock</option>
+            <option>Out of Stock</option>
+        </select>
+    </label>
+    
+    <label class="custom-date">
+        From
+        <input type="date" name="start_date" value="{{ report_start_date }}">
+    </label>
+    
+    <label class="custom-date">
+        To
+        <input type="date" name="end_date" value="{{ report_end_date }}">
+    </label>
+    
+    <div class="filter-actions">
+        <button type="submit" class="btn green">Apply filters</button>
+        <a class="btn neutral" href="{{ url_for('dashboard') }}">Reset</a>
+    </div>
+</form>

@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Register | EquipTrack</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body class="auth-page">
+    <main class="auth-card centered">
+        <div class="mobile-brand">
+            <span class="logo">ET</span> EquipTrack
+        </div>
+        
+        <small class="section-label">NEW ACCOUNT</small>
+        <h2>Create your workspace account</h2>
+        <p class="hint">Use a strong password with an uppercase letter, number, and special character.</p>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert {{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form method="post">
+            <label>
+                Username
+                <input name="username" required minlength="3" maxlength="20">
+            </label>
+            
+            <label>
+                Email
+                <input name="email" type="email" required>
+            </label>
+            
+            <label>
+                Password
+                <input name="password" type="password" required minlength="8">
+            </label>
+            
+            <label>
+                Account role
+                <select name="role">
+                    <option value="USER">User</option>
+                    <option value="ADMIN">Administrator</option>
+                </select>
+            </label>
+            
+            <button class="btn green wide">Create account</button>
+        </form>
+
+        <div class="auth-links">
+            <a href="{{ url_for('login') }}">← Back to sign in</a>
+        </div>
+    </main>
+</body>
+</html>

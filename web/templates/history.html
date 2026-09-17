@@ -1,0 +1,40 @@
+{% extends "page_shell.html" %}
+
+{% block title %}History and Audit{% endblock %}
+{% block page_label %}AUDIT TRAIL{% endblock %}
+{% block page_title %}History / Audit{% endblock %}
+
+{% block content %}
+<div class="page-intro">
+    <p>Administrative activity and equipment history.</p>
+</div>
+
+<div class="card table-card">
+    <table>
+        <thead>
+            <tr>
+                <th>Time</th>
+                <th>User</th>
+                <th>Action</th>
+                <th>Details</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in history %}
+            <tr>
+                <td>{{ row.created_at }}</td>
+                <td>{{ row.username }}</td>
+                <td>
+                    <span class="status ok">{{ row.action }}</span>
+                </td>
+                <td>{{ row.details }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="4" class="empty">No audit records yet.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
