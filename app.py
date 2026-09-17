@@ -62,13 +62,21 @@ def verify_supabase_connection(test_table=None, timeout=5):
         with urllib.request.urlopen(request, timeout=timeout) as response:
             rest_status = response.status
     except urllib.error.HTTPError as exc:
-        if exc.code in (401, 403):
+        # Newer Supabase projects reject anon/publishable keys for the bare
+        # REST root (schema introspection) with UNAUTHORIZED_INVALID_API_KEY_TYPE
+        # even though the key is valid for normal table queries. Treat that
+        # specific case as a successful connectivity check instead of a failure.
+        body = exc.read().decode("utf-8", errors="ignore") if exc.fp else ""
+        if exc.code == 401 and "UNAUTHORIZED_INVALID_API_KEY_TYPE" in (exc.headers.get("sb-error-code", "") or body):
+            rest_status = exc.code
+        elif exc.code in (401, 403):
             raise RuntimeError(
                 "Supabase responded, but the anon key was rejected. Check SUPABASE_ANON_KEY."
             ) from exc
-        raise RuntimeError(
-            f"Supabase REST endpoint returned HTTP {exc.code}: {exc.reason}."
-        ) from exc
+        else:
+            raise RuntimeError(
+                f"Supabase REST endpoint returned HTTP {exc.code}: {exc.reason}."
+            ) from exc
     except urllib.error.URLError as exc:
         raise RuntimeError(
             f"Unable to reach Supabase at {rest_url}: {exc.reason}."
