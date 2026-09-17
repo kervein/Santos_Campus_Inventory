@@ -3,3 +3,4 @@ bcrypt>=4.1.0
 pydantic>=2.7.0
 python-dotenv>=1.0.0
 supabase>=2.0.0
+gunicorn>=21.2.0
