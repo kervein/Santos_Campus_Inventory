@@ -1,6 +1,7 @@
 import csv
 import sqlite3
 
+import db_compat
 from logger import logger
 
 
@@ -18,6 +19,8 @@ class HardwareController:
     ]
 
     def _connect(self):
+        if db_compat.USE_POSTGRES:
+            return db_compat.get_connection()
         return sqlite3.connect(self.db_name)
 
     def _status_from_quantity(self, quantity: int) -> str:
@@ -234,7 +237,7 @@ class HardwareController:
             conn.close()
             logger.info(f"Hardware item added: {name} ({category}) x{quantity}")
             return True, "Item added successfully."
-        except sqlite3.Error as exc:
+        except db_compat.Error as exc:
             logger.error(f"Error adding hardware item: {exc}")
             return False, "Failed to add item to the database."
 
@@ -288,7 +291,7 @@ class HardwareController:
                 logger.info(f"Hardware item updated: ID {item_id}")
                 return True, "Item updated successfully."
             return False, "Item not found."
-        except sqlite3.Error as exc:
+        except db_compat.Error as exc:
             logger.error(f"Error updating hardware item: {exc}")
             return False, "Failed to update item in the database."
 
@@ -304,7 +307,7 @@ class HardwareController:
                 logger.info(f"Hardware item deleted: ID {item_id}")
                 return True, "Item deleted successfully."
             return False, "Item not found."
-        except sqlite3.Error as exc:
+        except db_compat.Error as exc:
             logger.error(f"Error deleting hardware item: {exc}")
             return False, "Failed to delete item from the database."
 

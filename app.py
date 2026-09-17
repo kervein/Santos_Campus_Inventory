@@ -25,6 +25,8 @@ except ImportError:  # pragma: no cover
 
 from models.database import init_hardware_db
 from controller.hardware_controller import HardwareController
+import db_compat
+from db_schema import POSTGRES_SCHEMA
 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -105,6 +107,8 @@ def verify_supabase_connection(test_table=None, timeout=5):
 
 
 def db():
+    if db_compat.USE_POSTGRES:
+        return db_compat.get_connection()
     connection = sqlite3.connect(
         app.config["DATABASE"], timeout=10, isolation_level=None
     )
@@ -114,6 +118,11 @@ def db():
 
 
 def prepare_database():
+    if db_compat.USE_POSTGRES:
+        with db() as connection:
+            connection.executescript(POSTGRES_SCHEMA)
+        return
+
     init_hardware_db(app.config["DATABASE"])
     with db() as connection:
         connection.executescript(
@@ -252,7 +261,7 @@ def register():
                     connection.execute("INSERT INTO users (username, email, password_hash, role) VALUES (?, ?, ?, ?)", (username, email, password_hash(password), role))
                 flash("Registration successful. You can now sign in.", "success")
                 return redirect(url_for("login"))
-            except sqlite3.IntegrityError:
+            except db_compat.IntegrityError:
                 flash("Username or email is already registered.", "error")
     return render_template("register.html")
 
@@ -317,21 +326,22 @@ def dashboard():
                 + (SELECT COUNT(*) FROM return_requests WHERE status = 'PENDING') AS count
             """
         ).fetchone()["count"]
-        report_overdue = connection.execute("SELECT COUNT(*) AS count FROM borrow_records WHERE returned_at IS NULL AND due_at IS NOT NULL AND datetime(due_at) < CURRENT_TIMESTAMP").fetchone()["count"]
+        report_overdue = connection.execute("SELECT COUNT(*) AS count FROM borrow_records WHERE returned_at IS NULL AND due_at IS NOT NULL AND due_at < ?", (datetime.now().strftime("%Y-%m-%d %H:%M:%S"),)).fetchone()["count"]
         trend_rows = connection.execute("SELECT date(borrowed_at) AS activity_date, SUM(quantity) AS borrowed FROM borrow_records WHERE date(borrowed_at) BETWEEN ? AND ? GROUP BY date(borrowed_at)", (start_date.isoformat(), end_date.isoformat())).fetchall()
         activity_map = {row["activity_date"]: row["borrowed"] for row in trend_rows}
         report_activity = [{"label": (start_date + timedelta(days=i)).strftime("%b %#d"), "borrowed": activity_map.get((start_date + timedelta(days=i)).isoformat(), 0)} for i in range(30)]
-        monthly_rows = connection.execute(
+        monthly_source_rows = connection.execute(
             """
-            SELECT strftime('%Y-%m', borrowed_at) AS activity_month,
-                   COALESCE(SUM(quantity), 0) AS borrowed
+            SELECT borrowed_at, quantity
             FROM borrow_records
             WHERE date(borrowed_at) BETWEEN ? AND ?
-            GROUP BY strftime('%Y-%m', borrowed_at)
             """,
             (first_month.isoformat(), end_date.isoformat()),
         ).fetchall()
-        monthly_map = {row["activity_month"]: row["borrowed"] for row in monthly_rows}
+        monthly_map = {}
+        for row in monthly_source_rows:
+            month_key = str(row["borrowed_at"])[:7]
+            monthly_map[month_key] = monthly_map.get(month_key, 0) + (row["quantity"] or 0)
         monthly_activity = []
         month_cursor = first_month
         for month_key in month_keys:
@@ -561,7 +571,8 @@ def reports():
         ]
         pending_requests = connection.execute("SELECT COUNT(*) AS count FROM borrow_requests WHERE status='PENDING'").fetchone()["count"]
         overdue = connection.execute(
-            "SELECT COUNT(*) AS count FROM borrow_records WHERE returned_at IS NULL AND due_at IS NOT NULL AND datetime(due_at) < CURRENT_TIMESTAMP"
+            "SELECT COUNT(*) AS count FROM borrow_records WHERE returned_at IS NULL AND due_at IS NOT NULL AND due_at < ?",
+            (datetime.now().strftime("%Y-%m-%d %H:%M:%S"),),
         ).fetchone()["count"]
         recent_activity = connection.execute(
             "SELECT action, details, created_at FROM audit_logs ORDER BY created_at DESC LIMIT 10"
@@ -1013,7 +1024,7 @@ def review_borrow(request_id, action):
             status = "APPROVED" if action == "approve" else "REJECTED"
             if action == "approve":
                 connection.execute("UPDATE hardware SET quantity=quantity-?, borrowed_quantity=borrowed_quantity+?, status=CASE WHEN quantity-?<=0 THEN 'Out of Stock' WHEN quantity-?<=5 THEN 'Low Stock' ELSE 'In Stock' END WHERE item_id=?", (request_row["quantity"], request_row["quantity"], request_row["quantity"], request_row["quantity"], request_row["item_id"]))
-                connection.execute("INSERT INTO borrow_records (item_id, student_name, student_id, quantity, due_at) VALUES (?, ?, ?, ?, datetime('now', '+14 days'))", (request_row["item_id"], request_row["username"], request_row["student_id"], request_row["quantity"]))
+                connection.execute("INSERT INTO borrow_records (item_id, student_name, student_id, quantity, due_at) VALUES (?, ?, ?, ?, ?)", (request_row["item_id"], request_row["username"], request_row["student_id"], request_row["quantity"], (datetime.now() + timedelta(days=14)).strftime("%Y-%m-%d %H:%M:%S")))
             connection.execute("UPDATE borrow_requests SET status=?, reviewed_at=CURRENT_TIMESTAMP, reviewed_by=? WHERE request_id=?", (status, session["username"], request_id))
             audit(session["username"], f"BORROW_{status}", f"{request_row['quantity']} unit(s) of {request_row['item_name']}", connection)
             flash(f"Borrow request {status.lower()}.", "success")
