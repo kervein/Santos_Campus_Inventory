@@ -4,6 +4,8 @@ import csv
 import io
 import os
 import sqlite3
+import urllib.error
+import urllib.request
 from datetime import datetime, timedelta
 from functools import wraps
 
@@ -11,8 +13,14 @@ import bcrypt
 from flask import Flask, flash, jsonify, redirect, render_template, request, session, url_for, send_file
 
 try:
-    from supabase import create_client
+    from dotenv import load_dotenv
 except ImportError:  # pragma: no cover
+    load_dotenv = None
+
+try:
+    from supabase import PostgrestAPIError, create_client
+except ImportError:  # pragma: no cover
+    PostgrestAPIError = None
     create_client = None
 
 from models.database import init_hardware_db
@@ -20,6 +28,9 @@ from controller.hardware_controller import HardwareController
 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+if load_dotenv is not None:
+    load_dotenv(os.path.join(BASE_DIR, ".env"))
+
 DATABASE = os.path.join(BASE_DIR, "hardware_inventory.db")
 app = Flask(__name__, template_folder=os.path.join(BASE_DIR, "web", "templates"), static_folder=os.path.join(BASE_DIR, "web"), static_url_path="/static")
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "development-secret-change-me")
@@ -36,6 +47,53 @@ def get_supabase_client():
     if supabase_client is None:
         raise RuntimeError("Supabase is not configured. Set SUPABASE_URL and SUPABASE_ANON_KEY.")
     return supabase_client
+
+
+def verify_supabase_connection(test_table=None, timeout=5):
+    client = get_supabase_client()
+    rest_url = f"{app.config['SUPABASE_URL'].rstrip('/')}/rest/v1/"
+    request_headers = {
+        "apikey": app.config["SUPABASE_ANON_KEY"],
+        "Authorization": f"Bearer {app.config['SUPABASE_ANON_KEY']}",
+    }
+
+    request = urllib.request.Request(rest_url, headers=request_headers, method="GET")
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            rest_status = response.status
+    except urllib.error.HTTPError as exc:
+        if exc.code in (401, 403):
+            raise RuntimeError(
+                "Supabase responded, but the anon key was rejected. Check SUPABASE_ANON_KEY."
+            ) from exc
+        raise RuntimeError(
+            f"Supabase REST endpoint returned HTTP {exc.code}: {exc.reason}."
+        ) from exc
+    except urllib.error.URLError as exc:
+        raise RuntimeError(
+            f"Unable to reach Supabase at {rest_url}: {exc.reason}."
+        ) from exc
+
+    verification_details = {
+        "rest_url": rest_url,
+        "rest_status": rest_status,
+    }
+
+    if test_table:
+        if PostgrestAPIError is None:
+            raise RuntimeError(
+                "Supabase query verification is unavailable because the supabase package is not installed."
+            )
+        try:
+            response = client.table(test_table).select("*").limit(1).execute()
+        except PostgrestAPIError as exc:
+            raise RuntimeError(
+                f"Connected to Supabase, but the test query for table '{test_table}' failed: {exc}"
+            ) from exc
+        verification_details["table"] = test_table
+        verification_details["sample_row_count"] = len(response.data or [])
+
+    return verification_details
 
 
 def db():
