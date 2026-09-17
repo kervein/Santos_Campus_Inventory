@@ -42,7 +42,11 @@ app.config["SUPABASE_ANON_KEY"] = os.environ.get("SUPABASE_ANON_KEY")
 
 supabase_client = None
 if app.config["SUPABASE_URL"] and app.config["SUPABASE_ANON_KEY"] and create_client is not None:
-    supabase_client = create_client(app.config["SUPABASE_URL"], app.config["SUPABASE_ANON_KEY"])
+    try:
+        supabase_client = create_client(app.config["SUPABASE_URL"], app.config["SUPABASE_ANON_KEY"])
+    except Exception as exc:  # noqa: BLE001 - any Supabase/httpx client init failure must not crash the app
+        print(f"[startup] Supabase client could not be initialized ({exc}); Supabase features will be unavailable.")
+        supabase_client = None
 
 
 def get_supabase_client():
