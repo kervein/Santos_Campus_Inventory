@@ -3,6 +3,7 @@ import hmac
 import csv
 import io
 import os
+import secrets
 import sqlite3
 import urllib.error
 import urllib.request
@@ -26,6 +27,7 @@ except ImportError:  # pragma: no cover
 from models.database import init_hardware_db
 from controller.hardware_controller import HardwareController
 import db_compat
+import mailer
 from db_schema import POSTGRES_SCHEMA
 
 
@@ -34,6 +36,7 @@ if load_dotenv is not None:
     load_dotenv(os.path.join(BASE_DIR, ".env"))
 
 DATABASE = os.path.join(BASE_DIR, "hardware_inventory.db")
+OTP_MINUTES = 10
 app = Flask(__name__, template_folder=os.path.join(BASE_DIR, "web", "templates"), static_folder=os.path.join(BASE_DIR, "web"), static_url_path="/static")
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "development-secret-change-me")
 app.config["DATABASE"] = DATABASE
@@ -218,6 +221,11 @@ def ensure_db():
         app._database_ready = True
 
 
+@app.get("/health")
+def health():
+    return jsonify({"status": "ok"})
+
+
 @app.route("/", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
@@ -260,14 +268,73 @@ def register():
         elif role not in {"USER", "ADMIN"}:
             flash("Invalid role.", "error")
         else:
+            with db() as connection:
+                taken = connection.execute(
+                    "SELECT 1 FROM users WHERE username = ? OR email = ?", (username, email)
+                ).fetchone()
+            if taken:
+                flash("Username or email is already registered.", "error")
+            else:
+                code = f"{secrets.randbelow(1_000_000):06d}"
+                try:
+                    emailed = mailer.send_otp(email, code, OTP_MINUTES)
+                except Exception as exc:  # noqa: BLE001 - SMTP failures must not crash registration
+                    print(f"[mailer] Failed to send OTP: {exc}")
+                    flash("Could not send the verification email. Please try again later.", "error")
+                    return render_template("register.html")
+                session["pending_registration"] = {
+                    "username": username, "email": email, "role": role,
+                    "password_hash": password_hash(password),
+                    "otp_hash": otp_digest(code), "attempts": 0,
+                    "expires": (datetime.utcnow() + timedelta(minutes=OTP_MINUTES)).timestamp(),
+                }
+                flash(
+                    f"A 6-digit code was sent to {email}." if emailed
+                    else "Email is not configured; the code was printed in the server console.",
+                    "success",
+                )
+                return redirect(url_for("verify_otp"))
+    return render_template("register.html")
+
+
+def otp_digest(code):
+    return hmac.new(app.config["SECRET_KEY"].encode(), code.encode(), hashlib.sha256).hexdigest()
+
+
+@app.route("/verify-otp", methods=["GET", "POST"])
+def verify_otp():
+    pending = session.get("pending_registration")
+    if not pending:
+        return redirect(url_for("register"))
+    if request.method == "POST":
+        if datetime.utcnow().timestamp() > pending["expires"]:
+            session.pop("pending_registration", None)
+            flash("Verification code expired. Please register again.", "error")
+            return redirect(url_for("register"))
+        code = request.form.get("code", "").strip()
+        if not hmac.compare_digest(otp_digest(code), pending["otp_hash"]):
+            pending["attempts"] += 1
+            if pending["attempts"] >= 5:
+                session.pop("pending_registration", None)
+                flash("Too many incorrect codes. Please register again.", "error")
+                return redirect(url_for("register"))
+            session["pending_registration"] = pending
+            flash("Incorrect verification code.", "error")
+        else:
             try:
                 with db() as connection:
-                    connection.execute("INSERT INTO users (username, email, password_hash, role) VALUES (?, ?, ?, ?)", (username, email, password_hash(password), role))
-                flash("Registration successful. You can now sign in.", "success")
-                return redirect(url_for("login"))
+                    connection.execute(
+                        "INSERT INTO users (username, email, password_hash, role) VALUES (?, ?, ?, ?)",
+                        (pending["username"], pending["email"], pending["password_hash"], pending["role"]),
+                    )
             except db_compat.IntegrityError:
+                session.pop("pending_registration", None)
                 flash("Username or email is already registered.", "error")
-    return render_template("register.html")
+                return redirect(url_for("register"))
+            session.pop("pending_registration", None)
+            flash("Email verified. You can now sign in.", "success")
+            return redirect(url_for("login"))
+    return render_template("verify_otp.html", email=pending["email"])
 
 
 @app.route("/reset", methods=["GET", "POST"])

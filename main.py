@@ -22,11 +22,23 @@ def parse_args():
         "--test-table",
         help="Optional Supabase table name to query with a limit(1) check.",
     )
+    parser.add_argument(
+        "--migrate-postgres",
+        action="store_true",
+        help="Copy the local SQLite data into the configured PostgreSQL/DATABASE_URL target.",
+    )
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     args = parse_args()
+
+    if args.migrate_postgres:
+        from migrate_sqlite_to_postgresql import migrate
+
+        migrate()
+        raise SystemExit(0)
+
     prepare_database()
 
     if args.test_supabase:

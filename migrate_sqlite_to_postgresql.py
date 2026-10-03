@@ -1,11 +1,15 @@
 """One-off migration script: copies EquipTrack's local SQLite data into a
-Supabase Postgres database.
+Supabase/Postgres database.
 
 Usage:
     python migrate_sqlite_to_postgresql.py
+    python main.py --migrate-postgres
 
 Requires DATABASE_URL to be set (in .env or the environment) pointing at the
 target Postgres instance (e.g. the Supabase connection pooler string).
+
+This project intentionally avoids pgloader so the migration works in a normal
+Python environment without a separate external binary that may not be installed.
 """
 
 import os
