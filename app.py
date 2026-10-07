@@ -297,6 +297,15 @@ def register():
     return render_template("register.html")
 
 
+def get_admin_emails(connection):
+    return [
+        row["email"]
+        for row in connection.execute(
+            "SELECT email FROM users WHERE role = 'ADMIN' AND email IS NOT NULL AND email != ''"
+        ).fetchall()
+    ]
+
+
 def otp_digest(code):
     return hmac.new(app.config["SECRET_KEY"].encode(), code.encode(), hashlib.sha256).hexdigest()
 
@@ -803,12 +812,7 @@ def account_password_request():
             "INSERT INTO password_reset_requests (user_id, email, requested_password_hash) VALUES (?, ?, ?)",
             (user["id"], user["email"], password_hash(requested_password)),
         )
-        admin_emails = [
-            row["email"]
-            for row in connection.execute(
-                "SELECT email FROM users WHERE role = 'ADMIN' AND email IS NOT NULL AND email != ''"
-            ).fetchall()
-        ]
+        admin_emails = get_admin_emails(connection)
     mailer.notify_admins_password_request(admin_emails, session["username"], user["email"])
     flash("Password change request submitted. An administrator must approve it before it takes effect.", "success")
     return redirect(url_for("settings"))
@@ -1063,6 +1067,11 @@ def borrow():
             else:
                 connection.execute("INSERT INTO borrow_requests (item_id, username, student_id, quantity) VALUES (?, ?, ?, ?)", (item_id, session["username"], request.form.get("student_id", "").strip(), quantity))
                 audit(session["username"], "BORROW_REQUEST", f"Requested {quantity} unit(s) of {item['item_name']}", connection)
+                admin_emails = get_admin_emails(connection)
+                mailer.notify_admins_borrow_request(
+                    admin_emails, session["username"], item["item_name"], quantity,
+                    request.form.get("student_id", "").strip(),
+                )
                 flash("Borrow request submitted. Stock remains unchanged until approval.", "success")
     return redirect(url_for("dashboard"))
 
