@@ -896,6 +896,10 @@ def admin_account_reset():
             """,
             (session["username"], user["id"]),
         )
+        admin_emails = get_admin_emails(connection)
+    mailer.notify_admins_account_action(
+        admin_emails, session["username"], username, "unlocked and reset the password"
+    )
     audit(
         session["username"],
         "ADMIN_ACCOUNT_RESET",
@@ -935,6 +939,10 @@ def review_password_request(request_id, action):
                 """,
                 (session["username"], request_id),
             )
+            mailer.notify_admins_account_action(
+                get_admin_emails(connection), session["username"],
+                password_request["username"], "rejected the password change request",
+            )
             flash(f"Password change request for '{password_request['username']}' was rejected.", "success")
             return redirect(url_for("settings"))
 
@@ -958,6 +966,11 @@ def review_password_request(request_id, action):
             """,
             (session["username"], request_id),
         )
+        admin_emails = get_admin_emails(connection)
+    mailer.notify_admins_account_action(
+        admin_emails, session["username"],
+        password_request["username"], "approved the password change request",
+    )
     audit(
         session["username"],
         "PASSWORD_CHANGE_REQUEST_APPROVED",

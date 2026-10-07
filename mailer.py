@@ -69,6 +69,15 @@ def notify_admins_borrow_request(admin_emails, username, item_name, quantity, st
     )
 
 
+def notify_admins_account_action(admin_emails, acting_admin, target_username, action):
+    notify_admins(
+        admin_emails,
+        f"EquipTrack: account {action}",
+        f"Admin '{acting_admin}' {action} for account '{target_username}'.\n"
+        "If this was not you or someone you trust, review the audit log in EquipTrack.",
+    )
+
+
 def send_otp(to_address, code, minutes):
     """Send an OTP. Returns True if emailed; False if SMTP is not configured
     (the code is printed to the server console for local development)."""
