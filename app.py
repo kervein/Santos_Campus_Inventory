@@ -803,6 +803,13 @@ def account_password_request():
             "INSERT INTO password_reset_requests (user_id, email, requested_password_hash) VALUES (?, ?, ?)",
             (user["id"], user["email"], password_hash(requested_password)),
         )
+        admin_emails = [
+            row["email"]
+            for row in connection.execute(
+                "SELECT email FROM users WHERE role = 'ADMIN' AND email IS NOT NULL AND email != ''"
+            ).fetchall()
+        ]
+    mailer.notify_admins_password_request(admin_emails, session["username"], user["email"])
     flash("Password change request submitted. An administrator must approve it before it takes effect.", "success")
     return redirect(url_for("settings"))
 

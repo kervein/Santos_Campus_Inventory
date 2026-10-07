@@ -3,6 +3,7 @@
 import os
 import smtplib
 import ssl
+import threading
 from email.message import EmailMessage
 
 BREVO_HOST = "smtp-relay.brevo.com"
@@ -27,6 +28,27 @@ def send_email(to_address, subject, body):
         server.starttls(context=ssl.create_default_context())
         server.login(os.environ["BREVO_SMTP_LOGIN"], os.environ["BREVO_SMTP_KEY"])
         server.send_message(message)
+
+
+def notify_admins_password_request(admin_emails, username, user_email):
+    """Email every admin about a pending password change request in the background.
+    Failures are logged and never block the user's request."""
+    if not admin_emails or not is_configured():
+        return
+
+    def worker():
+        for address in admin_emails:
+            try:
+                send_email(
+                    address,
+                    "EquipTrack: password change request needs approval",
+                    f"User '{username}' ({user_email}) requested a password change.\n"
+                    "Sign in to EquipTrack and open Settings to approve or reject the request.",
+                )
+            except Exception as exc:  # noqa: BLE001
+                print(f"[mailer] Failed to notify admin {address}: {exc}")
+
+    threading.Thread(target=worker, daemon=True).start()
 
 
 def send_otp(to_address, code, minutes):
