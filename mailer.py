@@ -5,6 +5,7 @@ import smtplib
 import ssl
 import threading
 from email.message import EmailMessage
+from email.utils import parseaddr
 
 BREVO_HOST = "smtp-relay.brevo.com"
 # Port 2525 is used because hosts like Render block outbound SMTP on 587.
@@ -31,13 +32,15 @@ def send_email(to_address, subject, body):
 
 
 def notify_admins(admin_emails, subject, body):
-    """Email every admin in the background. Failures are logged and never
-    block the user's request."""
-    if not admin_emails or not is_configured():
+    """Email every admin (plus ADMIN_NOTIFY_EMAIL, or the MAIL_FROM address when
+    unset) in the background. Failures are logged and never block the request."""
+    if not is_configured():
         return
+    extra = os.environ.get("ADMIN_NOTIFY_EMAIL") or parseaddr(os.environ["MAIL_FROM"])[1]
+    recipients = list(dict.fromkeys(a for a in [*admin_emails, extra] if a))
 
     def worker():
-        for address in admin_emails:
+        for address in recipients:
             try:
                 send_email(address, subject, body)
             except Exception as exc:  # noqa: BLE001
