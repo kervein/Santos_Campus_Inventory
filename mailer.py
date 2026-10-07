@@ -6,7 +6,8 @@ import ssl
 from email.message import EmailMessage
 
 BREVO_HOST = "smtp-relay.brevo.com"
-BREVO_PORT = 587
+# Port 2525 is used because hosts like Render block outbound SMTP on 587.
+BREVO_PORT = 2525
 
 
 def is_configured():
